@@ -1,0 +1,19 @@
+[theme]
+base = "light"
+primaryColor = "#2457A6"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F2F4F7"
+textColor = "#13233F"
+borderColor = "#D5DBE3"
+showWidgetBorder = true
+baseRadius = "small"
+font = "Public Sans:https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700&display=swap, sans-serif"
+redColor = "#B3261E"
+greenColor = "#2F7D4E"
+orangeColor = "#A86A00"
+blueColor = "#2457A6"
+grayColor = "#667085"
+linkColor = "#2457A6"
+
+[browser]
+gatherUsageStats = false
