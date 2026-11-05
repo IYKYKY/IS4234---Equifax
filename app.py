@@ -81,10 +81,32 @@ pages = [
     st.Page(V.page_audit, title="Audit and evaluation", icon=":material/fact_check:", url_path="audit"),
 ]
 nav = st.navigation(pages)
+PAGE_BY_TITLE = {p.title: p for p in pages}
+STEP_KEYS = [s["key"] for s in SC.SCENARIOS]
+
+
+def go_step(delta):
+    """Load the neighbouring demo step and open the page it is best viewed on."""
+    i = STEP_KEYS.index(st.session_state.scenario) + delta
+    if 0 <= i < len(STEP_KEYS):
+        st.session_state.scenario = STEP_KEYS[i]
+        load_scenario()
+        st.session_state.goto = SC.BY_KEY[STEP_KEYS[i]]["page"]
+
+
+goto = st.session_state.pop("goto", None)
+if goto in PAGE_BY_TITLE:
+    st.switch_page(PAGE_BY_TITLE[goto])
 
 with st.sidebar:
-    st.selectbox("Demo step", [s["key"] for s in SC.SCENARIOS], key="scenario", on_change=load_scenario,
+    st.selectbox("Demo step", STEP_KEYS, key="scenario", on_change=load_scenario,
                  format_func=lambda k: SC.BY_KEY[k]["label"])
+    pos = STEP_KEYS.index(st.session_state.scenario)
+    c = st.columns(2)
+    c[0].button("Back", icon=":material/arrow_back:", width="stretch", disabled=pos == 0,
+                on_click=go_step, args=(-1,), help="Loads the previous demo step and opens its page.")
+    c[1].button("Next", icon=":material/arrow_forward:", width="stretch", disabled=pos == len(STEP_KEYS) - 1,
+                on_click=go_step, args=(1,), help="Loads the next demo step and opens its page.")
     spec = SC.BY_KEY[st.session_state.scenario]
     st.caption(f"{spec['what']} Best viewed on: {spec['page']}.")
     S = st.session_state.sim
