@@ -12,43 +12,11 @@ import streamlit as st
 import engine as E
 import scenarios as SC
 import views as V
+import ui as UI
 
 st.set_page_config(page_title="Equifax vulnerability assurance prototype", page_icon=":material/verified_user:", layout="wide")
 
-CSS = """
-<style>
-h1 { font-weight: 700; letter-spacing: -0.01em; max-width: 30ch; line-height: 1.15; }
-.clock { border: 1px solid #D5DBE3; border-radius: 6px; padding: 14px 16px 10px; margin: 10px 0 12px; background: #FFFFFF; }
-.clock-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
-.clock-big { font-size: 2.1rem; font-weight: 700; font-variant-numeric: tabular-nums; color: #13233F; line-height: 1; }
-.clock-sub { color: #56637A; }
-.clock-right { margin-left: auto; font-weight: 600; font-variant-numeric: tabular-nums; }
-.clock.running .clock-right { color: #1F4A8A; }
-.clock.overdue .clock-right, .clock.overdue .clock-big { color: #9B2117; }
-.clock.closed .clock-right { color: #1F6B3F; }
-.track { position: relative; height: 10px; background: #EDF0F4; border-radius: 5px; }
-.fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 5px; background: #2457A6; }
-.clock.overdue .fill { background: #B3261E; }
-.clock.closed .fill { background: #2F7D4E; }
-.deadline { position: absolute; top: -5px; width: 2px; height: 20px; background: #13233F; }
-.rungs { display: flex; margin-top: 6px; }
-.rung { flex: 1; text-align: right; padding: 4px 0 0 6px; border-right: 2px solid #D5DBE3; padding-right: 6px; min-width: 0; }
-.rung .rt { font-weight: 700; font-variant-numeric: tabular-nums; }
-.rung .rw { font-size: 0.78rem; color: #56637A; overflow-wrap: anywhere; }
-.rung .rs { font-size: 0.78rem; font-variant-numeric: tabular-nums; }
-.rung.fired { border-right-color: #B3261E; }
-.rung.fired .rs { color: #9B2117; font-weight: 600; }
-.rung.skipped { opacity: 0.55; }
-.steps { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 4px 0 8px; font-size: 0.9rem; }
-.step { padding: 2px 10px; border-radius: 999px; border: 1px solid #D5DBE3; color: #56637A; }
-.step.done { background: #EDF0F4; color: #13233F; }
-.step.now { background: #13233F; color: #FFFFFF; border-color: #13233F; font-weight: 600; }
-.sep { color: #9AA4B2; }
-.simclock { font-variant-numeric: tabular-nums; font-weight: 700; font-size: 1.05rem; color: #13233F; }
-@media (max-width: 640px) { .rungs { flex-wrap: wrap; } .rung { flex: 0 0 33%; } .clock-right { margin-left: 0; } }
-</style>
-"""
-st.markdown(CSS, unsafe_allow_html=True)
+UI.apply_theme()
 
 
 def load_scenario():
@@ -80,8 +48,13 @@ pages = [
     st.Page(V.page_learning, title="Learning centre", icon=":material/school:", url_path="learning"),
     st.Page(V.page_audit, title="Audit and evaluation", icon=":material/fact_check:", url_path="audit"),
 ]
-nav = st.navigation(pages)
+nav = st.navigation({
+    "Workspace": pages[:2],
+    "Manage exposure": pages[2:6],
+    "Assurance & oversight": pages[6:],
+})
 PAGE_BY_TITLE = {p.title: p for p in pages}
+st.session_state.ui_pages = PAGE_BY_TITLE
 STEP_KEYS = [s["key"] for s in SC.SCENARIOS]
 
 
@@ -99,6 +72,7 @@ if goto in PAGE_BY_TITLE:
     st.switch_page(PAGE_BY_TITLE[goto])
 
 with st.sidebar:
+    st.markdown('<div class="sidebar-label">DEMONSTRATION WORKSPACE</div>', unsafe_allow_html=True)
     st.selectbox("Demo step", STEP_KEYS, key="scenario", on_change=load_scenario,
                  format_func=lambda k: SC.BY_KEY[k]["label"])
     pos = STEP_KEYS.index(st.session_state.scenario)
@@ -113,21 +87,25 @@ with st.sidebar:
     st.selectbox("Acting as", list(S["people"]), key="actor",
                  format_func=lambda p: f"{S['people'][p]['name']} ({S['people'][p]['role']})")
     st.markdown(f"<div class='simclock'>{S['now']:%a %d %b %Y, %H:%M} ET</div>", unsafe_allow_html=True)
-    nxt, kind = E.next_interesting_time(S)
-    c = st.columns(3)
-    if c[0].button("+1 h", width="stretch"):
-        E.advance(S, timedelta(hours=1)); st.rerun()
-    if c[1].button("+4 h", width="stretch"):
-        E.advance(S, timedelta(hours=4)); st.rerun()
-    if c[2].button("+1 day", width="stretch"):
-        E.advance(S, timedelta(days=1)); st.rerun()
-    if st.button("Jump to next escalation or alert", width="stretch", disabled=nxt is None,
-                 help=f"Next scheduled event: {nxt:%d %b %H:%M}" if nxt else "Nothing scheduled"):
-        E.advance_to(S, nxt + timedelta(minutes=1)); st.rerun()
-    if st.button("Run daily recalculation now", width="stretch", help="The job normally runs at 02:00. Use this to show the estimate move without waiting."):
-        E.run_daily_job(S, actor=st.session_state.actor); st.rerun()
-    st.button("Reset this step", width="stretch", on_click=load_scenario)
+    with st.expander("Simulation controls", expanded=False):
+        nxt, kind = E.next_interesting_time(S)
+        c = st.columns(3)
+        if c[0].button("+1 h", width="stretch"):
+            E.advance(S, timedelta(hours=1)); st.rerun()
+        if c[1].button("+4 h", width="stretch"):
+            E.advance(S, timedelta(hours=4)); st.rerun()
+        if c[2].button("+1 day", width="stretch"):
+            E.advance(S, timedelta(days=1)); st.rerun()
+        if st.button("Jump to next escalation or alert", width="stretch", disabled=nxt is None,
+                     help=f"Next scheduled event: {nxt:%d %b %H:%M}" if nxt else "Nothing scheduled"):
+            E.advance_to(S, nxt + timedelta(minutes=1)); st.rerun()
+        if st.button("Run daily recalculation now", width="stretch", help="The job normally runs at 02:00. Use this to show the estimate move without waiting."):
+            E.run_daily_job(S, actor=st.session_state.actor); st.rerun()
+        st.button("Reset this step", width="stretch", on_click=load_scenario)
     st.toggle("Presenter notes", key="show_notes")
     st.caption("Synthetic data. Prototype for IS4234 Group 20.")
 
+UI.workspace_header()
 nav.run()
+UI.footer()
+
