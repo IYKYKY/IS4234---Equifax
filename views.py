@@ -16,6 +16,7 @@ import assistant as A
 import engine as E
 import scenarios as SC
 import seed_data as sd
+import ui as UI
 
 # ---------------------------------------------------------------------------
 # Shared helpers
@@ -59,7 +60,7 @@ ORANGE = {"Warning", "Awaiting test", "Test overdue", "Pending evidence", "Pendi
           "Potentially affected (stale inventory)", "P2", "Stale", "Refresher due", "Unassessed", "Assessment incomplete",
           "Pending CISO approval"}
 BLUE = {"Assigned", "Acknowledged", "P3", "System"}
-HEX = {"green": "#1F6B3F", "red": "#9B2117", "orange": "#8A5A00", "blue": "#1F4A8A", "gray": "#4B5563"}
+HEX = {"green": "#1F6B3F", "red": "#9B2117", "orange": "#8A5A00", "blue": "#007298", "gray": "#4B5563"}
 
 
 def color_for(status):
@@ -168,7 +169,13 @@ def to_dt(d, t):
 # ---------------------------------------------------------------------------
 def page_overview():
     show_flash()
-    st.title("Every known vulnerability reaches a named owner, and closes only on evidence")
+    UI.overview_hero()
+    c = st.columns([1, 1, 1.3])
+    c[0].page_link(st.session_state.ui_pages["Dashboard"], label="Open dashboard", icon=":material/arrow_forward:")
+    c[1].page_link(st.session_state.ui_pages["Resolution tracker"], label="Track a resolution", icon=":material/timer:")
+    c[2].caption("CASE REPLAY · MARCH 2017 · SYNTHETIC DATA")
+    UI.capability_cards()
+    st.subheader("Designed around accountable action")
     st.markdown(
         "A technology prototype for Group 20's Equifax case. It replays March 2017 with synthetic data: "
         "the Apache Struts advisory arrives at 06:10 on 8 March, and you can follow what this design would have done "
@@ -303,7 +310,7 @@ def page_dashboard():
     s = S()
     pid = me()
     p = s["people"][pid]
-    st.title("Integrated dashboard")
+    UI.page_heading("Integrated dashboard", "WORKSPACE / OVERVIEW")
     st.caption(f"{p['name']}, {p['role']}. Simulated time {ts(s['now'])}. Each role sees the panels it acts on.")
     notes("dashboard")
     kpi_row(s)
@@ -507,7 +514,7 @@ def _audit_view(s):
 def page_allocator():
     show_flash()
     s = S()
-    st.title("Alert allocator")
+    UI.page_heading("Alert allocator", "EXPOSURE MANAGEMENT / TRIAGE")
     st.caption("Matches each advisory to the software inventory and assigns work to the named owner and deputy of every matching asset.")
     notes("allocator")
     acting_line()
@@ -670,7 +677,7 @@ def lifecycle(t):
 def page_tracker():
     show_flash()
     s = S()
-    st.title("Resolution tracker")
+    UI.page_heading("Resolution tracker", "EXPOSURE MANAGEMENT / REMEDIATION")
     notes("tracker")
     tasks = sorted([t for t in s["tasks"].values()], key=lambda t: t["id"])
     if not tasks:
@@ -859,7 +866,7 @@ def heatmap(s, highlight=None):
           [0.5, BAND_COLORS[2]], [0.75, BAND_COLORS[2]], [0.75, BAND_COLORS[3]], [1, BAND_COLORS[3]]]
     fig = go.Figure(go.Heatmap(z=z, x=list(range(1, 6)), y=list(range(1, 6)), text=text, texttemplate="%{text}",
                                colorscale=cs, zmin=0, zmax=3, showscale=False, hoverinfo="skip",
-                               textfont={"color": "#56637A", "size": 12}))
+                               textfont={"color": "#5F6A72", "size": 12}))
     pts = [t for t in s["tasks"].values() if t.get("rating") and t["rating"].get("score")]
     seen = {}
     xs, ys, labels, colors = [], [], [], []
@@ -871,22 +878,22 @@ def heatmap(s, highlight=None):
         xs.append(r["impact"] - 0.25 + 0.25 * (n % 3))
         ys.append(r["likelihood"] - 0.12 - 0.25 * (n // 3))
         labels.append(f"{t['id']} {t['asset_id']}")
-        colors.append("#13233F" if t["id"] == highlight else "#5B6B84")
+        colors.append("#333E48" if t["id"] == highlight else "#5F6A72")
     if xs:
         fig.add_trace(go.Scatter(x=xs, y=ys, mode="markers+text", text=[l.split()[1].replace("A-", "") for l in labels], textposition="bottom center",
                                  marker={"size": 11, "color": colors, "line": {"width": 1, "color": "white"}},
-                                 textfont={"size": 10, "color": "#13233F"}, hovertext=labels, hoverinfo="text"))
+                                 textfont={"size": 10, "color": "#333E48"}, hovertext=labels, hoverinfo="text"))
     fig.update_layout(height=380, margin={"l": 10, "r": 10, "t": 10, "b": 10}, showlegend=False,
                       xaxis={"title": "Impact", "dtick": 1, "range": [0.5, 5.5]},
                       yaxis={"title": "Likelihood", "dtick": 1, "range": [0.5, 5.5]},
-                      plot_bgcolor="white", font={"family": "Public Sans, sans-serif"})
+                      plot_bgcolor="white", font={"family": UI.CHART_FONT})
     return fig
 
 
 def page_risk():
     show_flash()
     s = S()
-    st.title("Risk assessment calculator")
+    UI.page_heading("Risk assessment calculator", "EXPOSURE MANAGEMENT / RISK")
     st.caption("Stage one sets how fast to act. Stage two estimates what is at stake and refreshes once a day from collected evidence.")
     notes("risk")
     acting_line()
@@ -981,10 +988,10 @@ def page_risk():
         hist = E.estimate_history(s, aid)
         if len(hist) > 0 and hist[-1]["eal"] is not None:
             df = pd.DataFrame([{"Run": h["run_at"], "Estimate": h["eal"]} for h in hist if h["eal"] is not None])
-            fig = go.Figure(go.Scatter(x=df["Run"], y=df["Estimate"], mode="lines+markers", line={"shape": "hv", "color": "#2457A6"}))
+            fig = go.Figure(go.Scatter(x=df["Run"], y=df["Estimate"], mode="lines+markers", line={"shape": "hv", "color": UI.BURGUNDY}))
             fig.add_hline(y=A_["tolerance"], line_dash="dot", line_color="#9B2117", annotation_text="Tolerance", annotation_position="top left")
             fig.update_layout(height=260, margin={"l": 10, "r": 10, "t": 20, "b": 10}, yaxis={"title": "US$ per year", "rangemode": "tozero"},
-                              plot_bgcolor="white", font={"family": "Public Sans, sans-serif"})
+                              plot_bgcolor="white", font={"family": UI.CHART_FONT})
             st.markdown("**Published estimate by daily run**")
             st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
 
@@ -995,7 +1002,7 @@ def page_risk():
 def page_controls():
     show_flash()
     s = S()
-    st.title("Control health")
+    UI.page_heading("Control health", "EXPOSURE MANAGEMENT / MONITORING")
     st.caption("Monitoring controls are tracked apart from patching. A control stays flagged until it is restored and tested.")
     notes("controls")
     acting_line()
@@ -1051,7 +1058,7 @@ SUGGESTED = ["Why was my evidence rejected?", "What evidence do I need before cl
 def page_assistant():
     show_flash()
     s = S()
-    st.title("Compliance assistant")
+    UI.page_heading("Compliance assistant", "ASSURANCE / POLICY GUIDANCE")
     st.caption("Answers come only from approved documents and cite the clause. It cannot close tasks, approve exceptions or change ratings.")
     notes("assistant")
     acting_line()
@@ -1130,7 +1137,7 @@ def _has_secrets():
 def page_learning():
     show_flash()
     s = S()
-    st.title("Learning centre")
+    UI.page_heading("Learning centre", "ASSURANCE / CAPABILITY")
     st.caption("Short scenario modules. Verifying fixes and approving risk are locked until the relevant module is passed at its current version.")
     notes("learning")
     acting_line()
@@ -1179,7 +1186,7 @@ def page_learning():
 def page_audit():
     show_flash()
     s = S()
-    st.title("Audit and evaluation")
+    UI.page_heading("Audit and evaluation", "OVERSIGHT / EVIDENCE")
     notes("audit")
     tabs = st.tabs(["Audit trail", "Internal audit sample", "Committee pack", "2017 versus this design", "Evaluation"])
     with tabs[0]:
@@ -1279,3 +1286,4 @@ def _evaluation(s):
         "acknowledgement time, unsupported closures accepted, and agreement between two assessors rating the same exposures. "
         "The assistant is evaluated separately on the Compliance-approved test set (see the Compliance assistant page). "
         "No A/B results are shown here because the exercise has not been run.")
+
