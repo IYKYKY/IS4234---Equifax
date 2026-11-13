@@ -1,19 +1,19 @@
 [theme]
 base = "light"
-primaryColor = "#2457A6"
+primaryColor = "#981E32"
 backgroundColor = "#FFFFFF"
-secondaryBackgroundColor = "#F2F4F7"
-textColor = "#13233F"
-borderColor = "#D5DBE3"
+secondaryBackgroundColor = "#F1F4F5"
+textColor = "#333E48"
+borderColor = "#D9DFE3"
 showWidgetBorder = true
 baseRadius = "small"
-font = "Public Sans:https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700&display=swap, sans-serif"
+font = "sans-serif"
 redColor = "#B3261E"
 greenColor = "#2F7D4E"
 orangeColor = "#A86A00"
-blueColor = "#2457A6"
+blueColor = "#007298"
 grayColor = "#667085"
-linkColor = "#2457A6"
+linkColor = "#007298"
 
 [browser]
 gatherUsageStats = false
