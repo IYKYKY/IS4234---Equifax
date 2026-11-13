@@ -258,7 +258,8 @@ def patch_table(s, tasks):
     rows = []
     for t in tasks:
         late = t["state"] not in E.CLOSED and t["due_at"] < s["now"]
-        rows.append({"Task": t["id"], "Asset": t["asset_id"], "Priority": t["priority"],
+        # Non-breaking hyphens keep IDs such as T-0002 on one line in the narrow half-width table.
+        rows.append({"Task": t["id"].replace("-", "‑"), "Asset": t["asset_id"].replace("-", "‑"), "Priority": t["priority"],
                      "State": "Overdue" if late else t["state"], "Due": short(t["due_at"]),
                      "Escalation": max([e["level"] for e in t["escalations"]], default=0)})
     return pd.DataFrame(rows)
@@ -312,7 +313,7 @@ def page_dashboard():
         st.subheader("Patching status")
         tasks = sorted([t for t in s["tasks"].values() if t["kind"] != "Ownership defect"], key=lambda t: t["id"])
         if tasks:
-            table(patch_table(s, tasks), ["Priority", "State"])
+            table(patch_table(s, tasks), ["Priority", "State"], wrap=True)
         else:
             st.caption("No exposures yet. Ingest an advisory from the Alert allocator.")
     with right:
@@ -1005,8 +1006,12 @@ def page_controls():
         f = E.factor_status(s, aid)
         if f["patch"][0] == "Passed" and f["detection"][0] != "Passed":
             blind.append((aid, f["detection"][1]))
+    # One banner per failed control, listing every patched application it leaves blind.
+    by_reason = {}
     for aid, why in blind:
-        st.error(f"{s['assets'][aid]['name']}: patching is complete but monitoring has failed. {why}", icon=":material/visibility_off:")
+        by_reason.setdefault(why, []).append(s["assets"][aid]["name"])
+    for why, names in by_reason.items():
+        st.error(f"Patching is complete but monitoring has failed for {', '.join(names)}. {why}", icon=":material/visibility_off:")
     table(control_table(s), ["Status"], wrap=True)
 
     cid = st.selectbox("Control", list(s["controls"]), format_func=lambda c: f"{c}  {s['controls'][c]['name']}", key="ctl_sel")
@@ -1063,6 +1068,8 @@ def page_assistant():
         mode = c[1].radio("Answer mode", ["Grounded retrieval", "Claude, grounded"], index=0,
                           help="Claude mode needs ANTHROPIC_API_KEY in Streamlit secrets. Retrieval and referral rules run first in both modes.",
                           disabled=not key)
+        if not key:
+            c[1].caption("Claude mode is off: no API key is configured. Answers use grounded retrieval.")
         cols = st.columns(3)
         for i, q in enumerate(SUGGESTED):
             if cols[i % 3].button(q, key=f"sq_{i}", width="stretch"):
